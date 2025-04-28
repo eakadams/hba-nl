@@ -17,7 +17,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # define some global paths
-cal_json_file_path = '../data/cal_json'  # hope this relative path works
+# do this in a hacky way
+this_dir, this_filename = os.path.split(__file__)
+hbanldir = this_dir[:-7]
+datadir = os.path.join(hbanldir, "data")
+cal_json_file_path = os.path.join(datadir, 'cal_json')  # hope this relative path works
 
 
 def get_cal_from_json(json_path):
@@ -86,14 +90,21 @@ def get_flagging_frac_metric(json_path):
     # now get some metrics
     # place in a dictionary
     flagged_fracs = {}
-    flagged_fracs['core'] = {'median': statistics.median(flagged_data_core),
-                             'mean': statistics.fmean(flagged_data_core)}
-    print(flagged_fracs)
-    flagged_fracs['remote'] = {'median': statistics.median(flagged_data_remote),
-                               'mean': statistics.fmean(flagged_data_remote)}
-    flagged_fracs['international'] = {'median': statistics.median(flagged_data_intl),
-                                      'mean': statistics.fmean(flagged_data_intl)}
-    print(flagged_fracs)
+    try:
+        flagged_fracs['core'] = {'median': statistics.median(flagged_data_core),
+                                 'mean': statistics.fmean(flagged_data_core)}
+    except:
+        flagged_fracs['core'] = {'median': np.nan, 'mean': np.nan}
+    try:
+        flagged_fracs['remote'] = {'median': statistics.median(flagged_data_remote),
+                                   'mean': statistics.fmean(flagged_data_remote)}
+    except:
+        flagged_fracs['remote'] = {'median': np.nan, 'mean': np.nan}
+    try:
+        flagged_fracs['international'] = {'median': statistics.median(flagged_data_intl),
+                                          'mean': statistics.fmean(flagged_data_intl)}
+    except:
+        flagged_fracs['international'] = {'median': np.nan, 'mean': np.nan}
 
     # and return the dictionary
     return flagged_fracs
@@ -131,14 +142,44 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path):
     json_file_list = find_all_cals(cal_path)
     # create a dictionary to put things in
     # want to keep structure and also ability to sort by type
-    global_flags = []
+    # can't actually figure out how to do this nicely, so just create massive arrays/lists
+    cal_list = []
+    obs_list = []
+    fd_c_mean = []
+    fd_c_median = []
+    fd_r_mean = []
+    fd_r_median = []
+    fd_i_mean = []
+    fd_i_median = []
     for f in json_file_list:
         ff = get_flagging_frac_metric(f)
-        obs = f.split('/')[-2]
-        cal = f.split('/')[-1].split('_')[0]
-        cal_dict = {'Observation ID': obs, 'Calibrator': cal,
-                    'Flagging fractions': ff}
-        global_flags.append(cal_dict)
+        obs_list.append(f.split('/')[-2])
+        cal_list.append(f.split('/')[-1].split('_')[0])
+        # cal_dict = {'Observation ID': obs, 'Calibrator': cal,
+        #             'Flagging fractions': ff}
+        fd_c_mean.append(ff['core']['mean'])
+        fd_c_median.append(ff['core']['median'])
+        fd_r_mean.append(ff['remote']['mean'])
+        fd_r_median.append(ff['remote']['median'])
+        fd_i_mean.append(ff['international']['mean'])
+        fd_i_median.append(ff['international']['median'])
+
+    # now visualize things
+    # plot histograms for everything
+    # worry about parsing later
+    fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(12, 4))
+    ax1.hist([fd_c_mean, fd_c_median], 50,  histtype='step', fill=False, label=['Mean', 'Median'])
+    ax1.set_title('Core stations flagged data fractions')
+    ax2.hist([fd_r_mean, fd_r_median], 50, histtype='step', fill=False, label=['Mean', 'Median'])
+    ax2.set_title('Remote stations flagged data fractions')
+    ax3.hist([fd_i_mean, fd_i_median], 50, histtype='step', fill=False, label=['Mean', 'Median'])
+    ax3.set_title('Intl stations flagged data fractions')
+    ax3.legend()
+    plt.savefig('fd_hist.pdf')
+
+
+
+
 
 
 
