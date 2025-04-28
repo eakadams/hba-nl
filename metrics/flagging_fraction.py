@@ -167,12 +167,20 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path):
     # now visualize things
     # plot histograms for everything
     # worry about parsing later
+    # okay do a quick check to ignore that are "POINT" - not sure they're good
+    ind_cal = np.where(np.array(cal_list) != 'POINT')[0]
     fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(12, 4))
-    ax1.hist([fd_c_mean, fd_c_median], 50,  histtype='step', fill=False, label=['Mean', 'Median'])
+    ax1.hist([fd_c_mean, fd_c_median], 30,  histtype='step', fill=False, label=['Mean', 'Median'])
+    ax1.hist([np.array(fd_c_mean)[ind_cal], np.array(fd_c_median)[ind_cal]], 30, histtype='step', fill=True,
+             alpha=0.3, color=['#1f77b4', '#ff7f0e'])
     ax1.set_title('Core stations flagged data fractions')
-    ax2.hist([fd_r_mean, fd_r_median], 50, histtype='step', fill=False, label=['Mean', 'Median'])
+    ax2.hist([fd_r_mean, fd_r_median], 30, histtype='step', fill=False, label=['Mean', 'Median'])
+    ax2.hist([np.array(fd_r_mean)[ind_cal], np.array(fd_r_median)[ind_cal]], 30, histtype='step', fill=True,
+             alpha=0.3, color=['#1f77b4', '#ff7f0e'])
     ax2.set_title('Remote stations flagged data fractions')
-    ax3.hist([fd_i_mean, fd_i_median], 50, histtype='step', fill=False, label=['Mean', 'Median'])
+    ax3.hist([fd_i_mean, fd_i_median], 30, histtype='step', fill=False, label=['Mean', 'Median'])
+    ax3.hist([np.array(fd_i_mean)[ind_cal], np.array(fd_i_median)[ind_cal]], 30, histtype='step', fill=True,
+             alpha=0.3, color=['#1f77b4', '#ff7f0e'])
     ax3.set_title('Intl stations flagged data fractions')
     ax3.legend()
     plt.savefig('fd_hist.pdf')
