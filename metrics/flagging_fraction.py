@@ -78,7 +78,7 @@ def get_flagging_single_cal(json_path):
     return flagged_data_core, flagged_data_remote, flagged_data_intl
 
 
-def get_flagging_frac_metric(json_path):
+def get_flagging_frac_metric(json_path, threshold=70):
     """For a single calibrator observation
     with output json given by json_path, get flagging metrics
     Put this in separate function so can easily update
@@ -92,19 +92,30 @@ def get_flagging_frac_metric(json_path):
     flagged_fracs = {}
     try:
         flagged_fracs['core'] = {'median': statistics.median(flagged_data_core),
-                                 'mean': statistics.fmean(flagged_data_core)}
+                                 'mean': statistics.fmean(flagged_data_core),
+                                 'n_thresh': sum(i > threshold for i in flagged_data_core),
+                                 'n_tot': len(flagged_data_core)}
     except:
-        flagged_fracs['core'] = {'median': np.nan, 'mean': np.nan}
+        flagged_fracs['core'] = {'median': np.nan, 'mean': np.nan,
+                                 'n_thresh': np.nan, 'n_tot': np.nan}
     try:
         flagged_fracs['remote'] = {'median': statistics.median(flagged_data_remote),
-                                   'mean': statistics.fmean(flagged_data_remote)}
+                                   'mean': statistics.fmean(flagged_data_remote),
+                                   'n_thresh': sum(i > threshold for i in flagged_data_remote),
+                                   'n_tot': len(flagged_data_remote)
+                                   }
     except:
-        flagged_fracs['remote'] = {'median': np.nan, 'mean': np.nan}
+        flagged_fracs['remote'] = {'median': np.nan, 'mean': np.nan,
+                                   'n_thresh': np.nan, 'n_tot': np.nan}
     try:
         flagged_fracs['international'] = {'median': statistics.median(flagged_data_intl),
-                                          'mean': statistics.fmean(flagged_data_intl)}
+                                          'mean': statistics.fmean(flagged_data_intl),
+                                          'n_thresh': sum(i > threshold for i in flagged_data_intl),
+                                          'n_tot': len(flagged_data_intl)
+                                          }
     except:
-        flagged_fracs['international'] = {'median': np.nan, 'mean': np.nan}
+        flagged_fracs['international'] = {'median': np.nan, 'mean': np.nan,
+                                          'n_thresh': np.nan, 'n_tot': np.nan}
 
     # and return the dictionary
     return flagged_fracs
@@ -130,7 +141,7 @@ def find_all_cals(cal_path=cal_json_file_path):
     return json_file_list
 
 
-def examine_global_flagging_metrics(cal_path=cal_json_file_path):
+def examine_global_flagging_metrics(cal_path=cal_json_file_path, threshold=70):
     """
     Take a path to all the calibrators, get the file list (other function),
     iterate through to get flagging stats (other function),
@@ -147,29 +158,43 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path):
     obs_list = []
     fd_c_mean = []
     fd_c_median = []
+    fd_c_thresh = []
+    fd_c_tot = []
     fd_r_mean = []
     fd_r_median = []
+    fd_r_thresh = []
+    fd_r_tot = []
     fd_i_mean = []
     fd_i_median = []
+    fd_i_thresh = []
+    fd_i_tot = []
     for f in json_file_list:
-        ff = get_flagging_frac_metric(f)
+        ff = get_flagging_frac_metric(f, threshold=threshold)
         obs_list.append(f.split('/')[-2])
         cal_list.append(f.split('/')[-1].split('_')[0])
         # cal_dict = {'Observation ID': obs, 'Calibrator': cal,
         #             'Flagging fractions': ff}
         fd_c_mean.append(ff['core']['mean'])
         fd_c_median.append(ff['core']['median'])
+        fd_c_thresh.append(ff['core']['n_thresh'])
+        fd_c_tot.append(ff['core']['n_tot'])
         fd_r_mean.append(ff['remote']['mean'])
         fd_r_median.append(ff['remote']['median'])
+        fd_r_thresh.append(ff['remote']['n_thresh'])
+        fd_r_tot.append(ff['remote']['n_tot'])
         fd_i_mean.append(ff['international']['mean'])
         fd_i_median.append(ff['international']['median'])
+        fd_i_thresh.append(ff['international']['n_thresh'])
+        fd_i_tot.append(ff['international']['n_tot'])
 
     # now visualize things
     # plot histograms for everything
     # worry about parsing later
     # okay do a quick check to ignore that are "POINT" - not sure they're good
     ind_cal = np.where(np.array(cal_list) != 'POINT')[0]
-    fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(12, 4))
+    fig, ((ax1, ax2, ax3),
+          (ax4, ax5, ax6),
+          (ax7, ax8, ax9)) = plt.subplots(3,3, figsize=(12, 12))
     ax1.hist([fd_c_mean, fd_c_median], 30,  histtype='step', fill=False, label=['Mean', 'Median'])
     ax1.hist([np.array(fd_c_mean)[ind_cal], np.array(fd_c_median)[ind_cal]], 30, histtype='step', fill=True,
              alpha=0.3, color=['#1f77b4', '#ff7f0e'])
@@ -183,7 +208,34 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path):
              alpha=0.3, color=['#1f77b4', '#ff7f0e'])
     ax3.set_title('Intl stations flagged data fractions')
     ax3.legend()
-    plt.savefig('fd_hist.pdf')
+    ax4.scatter(fd_c_median, np.array(fd_c_thresh)/np.array(fd_c_tot), s=3)
+    ax4.plot([threshold, threshold], [0,1], color='orange')
+    ax4.set_ylabel('Fraction above threshold')
+    ax4.set_xlabel('Median flagged fraction')
+    ax4.set_title(f'Core Threshold of {threshold}')
+    ax5.scatter(fd_r_median, np.array(fd_r_thresh)/np.array(fd_r_tot), s=3)
+    ax5.plot([threshold, threshold], [0, 1], color='orange')
+    ax5.set_ylabel('Fraction above threshold')
+    ax5.set_xlabel('Median flagged fraction')
+    ax5.set_title(f'Remote Threshold of {threshold}')
+    ax6.scatter(fd_i_median,np.array(fd_i_thresh)/np.array(fd_i_tot), s=3)
+    ax6.plot([threshold, threshold], [0, 1], color='orange')
+    ax6.set_ylabel('Fraction above threshold')
+    ax6.set_xlabel('Median flagged fraction')
+    ax6.set_title(f'Intl Threshold of {threshold}')
+    ax7.scatter(fd_c_median, fd_c_thresh, s=3)
+    ax7.plot([threshold, threshold], [0, 50], color='orange')
+    ax7.set_ylabel('Number above threshold')
+    ax7.set_xlabel('Median flagged fraction')
+    ax8.scatter(fd_r_median, fd_r_thresh, s=3)
+    ax8.plot([threshold, threshold], [0, 15], color='orange')
+    ax8.set_ylabel('Number above threshold')
+    ax8.set_xlabel('Median flagged fraction')
+    ax9.scatter(fd_i_median, fd_i_thresh, s=3)
+    ax9.plot([threshold, threshold], [0, 15], color='orange')
+    ax9.set_ylabel('Number above threshold')
+    ax9.set_xlabel('Median flagged fraction')
+    plt.savefig('flagged_data_cals.pdf')
 
 
 
