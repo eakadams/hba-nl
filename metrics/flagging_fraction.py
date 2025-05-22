@@ -212,7 +212,11 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path, threshold=70,
         core_pass.append(True) if ff['core']['n_pass'] >= n_pass_core else core_pass.append(False)
         remote_pass.append(True) if ff['remote']['n_pass'] >= n_pass_remote else remote_pass.append(False)
         intl_pass.append(True) if ff['international']['n_pass'] >= n_pass_intl else intl_pass.append(False)
-
+    # calculate total numbers
+    total_core_pass = np.sum(np.where(core_pass, 1, 0))
+    total_remote_pass = np.sum(np.where(remote_pass, 1, 0))
+    total_intl_pass = np.sum(np.where(intl_pass, 1, 0))
+    total_obs = len(core_pass)
     # get an overall table to output
     metric_table = Table([obs_list, core_pass, remote_pass, intl_pass,
                           fd_c_pass, fd_r_pass, fd_i_pass],
@@ -222,8 +226,11 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path, threshold=70,
     metric_table.meta['comments'] = [f'Threshold of flagging is {threshold}%',
                                      f"{n_pass_core} core stations to pass",
                                      f"{n_pass_remote} remote stations to pass",
-                                     f"{n_pass_intl} international stations to pass"]
-    metric_table.write(f'{output}.csv', format='csv', overwrite=True, comment='#')
+                                     f"{n_pass_intl} international stations to pass",
+                                     f'For core stations, {total_core_pass}/{total_obs} observations pass',
+                                     f'For remote stations, {total_remote_pass}/{total_obs} observations pass',
+                                     f'For international stations, {total_intl_pass}/{total_obs} observations pass']
+    metric_table.write(f'{output}.csv', format='csv', overwrite=True, comment='# ')
 
     # now visualize things
     # plot histograms for everything
@@ -268,16 +275,19 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path, threshold=70,
     ax7.scatter(fd_c_median, fd_c_pass, s=3)
     ax7.plot([threshold, threshold], [0, 50], color='orange')
     ax7.plot([0, 100], [n_pass_core, n_pass_core], color='orange', linestyle='--')
+    ax7.text(10, 40, f'{total_core_pass}/{total_obs} observations pass')
     ax7.set_ylabel('Number of stations passing')
     ax7.set_xlabel('Median flagged fraction')
     ax8.scatter(fd_r_median, fd_r_pass, s=3)
     ax8.plot([threshold, threshold], [0, 15], color='orange')
     ax8.plot([0, 100], [n_pass_remote, n_pass_remote], color='orange', linestyle='--')
+    ax8.text(10, 10, f'{total_remote_pass}/{total_obs} observations pass')
     ax8.set_ylabel('Number of stations passing')
     ax8.set_xlabel('Median flagged fraction')
     ax9.scatter(fd_i_median, fd_i_pass, s=3)
     ax9.plot([threshold, threshold], [0, 15], color='orange')
     ax9.plot([0, 100], [n_pass_intl, n_pass_intl], color='orange', linestyle='--')
+    ax9.text(10, 10, f'{total_intl_pass}/{total_obs} observations pass')
     ax9.set_ylabel('Number of stations passing')
     ax9.set_xlabel('Median flagged fraction')
     plt.savefig(f'{output}.pdf')
