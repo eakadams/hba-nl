@@ -16,7 +16,7 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table
-from astropy.io import ascii
+import sys
 
 # define some global paths
 # do this in a hacky way
@@ -219,12 +219,11 @@ def examine_global_flagging_metrics(cal_path=cal_json_file_path, threshold=70,
                          names=('ObsID','Core Pass', 'Remote Pass', 'Intl Pass',
                                 'Nstation good core', 'Nstation good remote',
                                 'Nstation good intl'))
-    metric_table.meta['comments'] = [f'Threshold of flagging is {threshold}',
+    metric_table.meta['comments'] = [f'Threshold of flagging is {threshold}%',
                                      f"{n_pass_core} core stations to pass",
                                      f"{n_pass_remote} remote stations to pass",
                                      f"{n_pass_intl} international stations to pass"]
-    metric_table.write(f'{output}.csv', format='csv', overwrite=True)
-
+    metric_table.write(f'{output}.csv', format='csv', overwrite=True, comment='#')
 
     # now visualize things
     # plot histograms for everything
